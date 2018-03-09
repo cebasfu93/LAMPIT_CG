@@ -9,6 +9,7 @@ parser.add_option("-l", "--lig", action="store", type='string', dest="LigFile", 
 parser.add_option("-i", "--itp", action="store", type='string', dest="ItpFile", default='Lig_A.itp', help="Name of the ligand's itp topology written by martinize")
 parser.add_option("-p", "--top", action="store", type='string', dest="TopFile", default='Lig.top', help="Name of the ligand's top topology written by martinize")
 parser.add_option("-e", "--element", action="store", type='string', dest="Element", default='Pt', help="Element")
+parser.add_option("-a", "--anchor", action="store", type='int', dest="AnchorIndex", default='0', help="Index (starting on 1) in the ligand's gro file corresponding to the atom connecting the core")
 parser.add_option("-o", "--output", action="store", type='string', dest="OutFile", default='NP1.top', help="Output file name")
 (options, args) = parser.parse_args()
 NP_opt = options.NPFile
@@ -17,10 +18,10 @@ Lig_opt = options.LigFile
 Itp_opt = options.ItpFile
 Top_opt = options.TopFile
 Ele_opt = options.Element
+anchor_opt = options.AnchorIndex-1
 out_opt = options.OutFile
 M_bead = "C1"
-EN_cons = 32500 #paper 355
-bond_type = "1"
+cons_type = "1" #as written by martinize
 
 def init_gro(name_file):
     gro_file = np.genfromtxt(name_file, dtype='str', delimiter="\n", skip_header=2, skip_footer=1)
@@ -106,8 +107,6 @@ def write_bonds():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), int(section[j,4]), section[j,6]))
 
-    write_M_bonds()
-    write_S_bonds()
     out.write("#ifndef NO_RUBBER_BANDS \n#ifndef RUBBER_FC \n#define RUBBER_FC 500.000000 \n#endif \n")
     for i in range(NL):
         for j in range(len(section_rub)):
@@ -136,7 +135,27 @@ def write_constraints():
             at1 = NM+i*N_at_lig+int(section[j,0])
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), section[j,5]))
+
+    write_M_cons()
+    write_S_cons()
     out.write("\n")
+
+def write_M_cons():
+    D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
+    for i in range(NM):
+        near_M = np.argsort(D_M_M[i])[1:5]
+        for j in range(len(near_M)):
+            at1 = i+1
+            at2 = near_M[j]+1
+            out.write("{:5d}{:6d}{:>7}{:10.5f} ; M - M \n".format(at1, at2, cons_type, D_M_M[at1-1, at2-1]))
+
+def write_S_cons():
+    D_S_M = cdist(x_sys[n_sys==n_lig[anchor_opt]], x_sys[n_sys==Ele_opt])
+    for i in range(NL):
+        near_M = np.argsort(D_S_M[i])[0]
+        at1 = NM+i*N_at_lig+anchor_opt+1
+        at2 = near_M+1
+        out.write("{:5d}{:6d}{:>7}{:10.5f} ; M - S \n".format(at1, at2, cons_type, 0.47))
 
 def write_angles():
     found_pattern = False
@@ -184,15 +203,6 @@ def write_dihedrals():
 def write_footers():
     out.write("[ system ] \n; name \n" + str(NPTitle) + "\n \n")
     out.write("[ molecules ] \n; name \t \t number \n"+str(NPTitle) + "\t \t 1 \n")
-
-def write_M_bonds():
-    D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
-    for i in range(NM):
-        near_M = np.argsort(D_M_M[i])[1:5]
-        for j in range(len(near_M)):
-            at1 = i+1
-            at2 = near_M[j]+1
-            out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; EN-CORE \n".format(at1, at2, bond_type, D_M_M[at1-1,at2-1], EN_cons))
 
 x_sys, n_sys, r_sys = init_gro(NP_opt)
 x_lig, n_lig, r_lig = init_gro(Lig_opt)
