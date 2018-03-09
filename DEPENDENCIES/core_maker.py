@@ -177,7 +177,7 @@ def put_staples(shell, radius):
     mins = np.argmin(distances, axis=1)
     for i in range(len(S_atoms)):
         norma=np.linalg.norm(shell[mins[i]])
-        scaling = (norma + (metal_radius[metal_opt]+metal_radius['S']))/norma
+        scaling = (norma + 0.47)/norma #0.47 is the standard bead-bead distance in Martini
         S_atoms[i,:] = scaling*shell[mins[i]]
 
     return S_atoms
