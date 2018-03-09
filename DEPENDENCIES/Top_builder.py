@@ -22,6 +22,8 @@ anchor_opt = options.AnchorIndex-1
 out_opt = options.OutFile
 M_bead = "C1"
 cons_type = "1" #as written by martinize
+bond_type = "1"
+EN_cons = 32500
 
 def init_gro(name_file):
     gro_file = np.genfromtxt(name_file, dtype='str', delimiter="\n", skip_header=2, skip_footer=1)
@@ -41,9 +43,8 @@ def init_topology(name_file):
 
 def write_headers():
     out.write("; Topology written by Top_builder.py \n \n")
-    out.write("#include \"martini.itp\" \n \n")
+    out.write("#include \"inputs/martini_v2.2refP.itp\" \n \n")
     out.write("#define RUBBER_BANDS \n \n")
-    out.write("#include \"martini.itp\" \n \n")
 
 def write_moltype():
     found_pattern = False
@@ -107,6 +108,7 @@ def write_bonds():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), int(section[j,4]), section[j,6]))
 
+    write_M_bonds()
     out.write("#ifndef NO_RUBBER_BANDS \n#ifndef RUBBER_FC \n#define RUBBER_FC 500.000000 \n#endif \n")
     for i in range(NL):
         for j in range(len(section_rub)):
@@ -136,23 +138,30 @@ def write_constraints():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), section[j,5]))
 
-    write_M_cons()
+    #write_M_cons()
     write_S_cons()
     out.write("\n")
 
-def write_M_cons():
+def write_M_bonds():
     D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
+    bonds = []
     for i in range(NM):
-        near_M = np.argsort(D_M_M[i])[1:5]
+        near_M = np.argsort(D_M_M[i])[1:20]
         for j in range(len(near_M)):
             at1 = i+1
             at2 = near_M[j]+1
-            out.write("{:5d}{:6d}{:>7}{:10.5f} ; M - M \n".format(at1, at2, cons_type, D_M_M[at1-1, at2-1]))
+            a = [at1, at2]
+            if a not in bonds :
+                a.reverse()
+                bonds.append(a)
+                out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(at1, at2, bond_type, D_M_M[at1-1, at2-1], EN_cons))
+                #out.write("{:5d}{:6d}{:>7}{:10.5f} ; M - M \n".format(at1, at2, cons_type, D_M_M[at1-1, at2-1]))
 
 def write_S_cons():
-    D_S_M = cdist(x_sys[n_sys==n_lig[anchor_opt]], x_sys[n_sys==Ele_opt])
+    #D_S_M = cdist(x_sys[n_sys==n_lig[anchor_opt]], x_sys[n_sys==Ele_opt])
     for i in range(NL):
-        near_M = np.argsort(D_S_M[i])[0]
+        D_S_M = cdist([x_sys[NM+i*N_at_lig+anchor_opt]], x_sys[n_sys==Ele_opt])[0]
+        near_M = np.argsort(D_S_M)[0]
         at1 = NM+i*N_at_lig+anchor_opt+1
         at2 = near_M+1
         out.write("{:5d}{:6d}{:>7}{:10.5f} ; M - S \n".format(at1, at2, cons_type, 0.47))
