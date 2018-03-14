@@ -16,6 +16,7 @@ lattice_constants['Ag'] = 0.40853
 lattice_constants['Cu'] = 0.36149
 
 metal_radius = {'Pt' : 0.1385} #in nm
+#metal_radius = {'Pt' : 0.1} #in nm
 metal_radius['Au'] = 0.144
 metal_radius['Fe'] = 0.126
 metal_radius['Al'] = 0.143
@@ -27,11 +28,11 @@ metal_radius['Cu'] = 0.128
 metal_radius['S'] = 0.102
 
 parser=OptionParser()
-parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.pdb', help="Name of the output file")
+parser.add_option("-o", "--output", action="store", type='string', dest="OutputFile", default='NP1.xyz', help="Name of the output file")
 parser.add_option("-m", "--metal", action="store", type='string', dest="Metal", default='Au', help="Chemical symbol of the core")
 parser.add_option("-n", "--ligands", action="store", type='int', dest="NumberLigands", default='60', help="Number of ligands to place around the sphere")
 parser.add_option("-r", "--radius", action="store", type='float', dest="Radius", default='3.0', help="Radius of the spherical core (nm)")
-parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='hollow', help="Methods used to build the sphere. Valid options: fcc, hollow, solid, semisolid. When solid is selected, the output radius is not the same as the requested")
+parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='gkeka', help="Methods used to build the sphere. Valid options: fcc, hollow, solid, semisolid. When solid is selected, the output radius is not the same as the requested")
 parser.add_option("-d", "--thickness", action="store", type='float', dest="Thickness", default='1.2', help="Thickness of the shell (nm) when using option semisolid")
 (options, args) = parser.parse_args()
 outname_opt = options.OutputFile
@@ -167,6 +168,39 @@ def semi_solid_sphere(thick):
         print("The achieved density is {:.3f} atoms/nm^3".format(len(points)/V))
     return points
 
+def gkeka_sphere():
+    spacing = 0.11 #metal_radius[metal_opt]# 0.11 #Optimal for a closed sphere on the edges
+    xyz = []
+    N_at = round(math.pi*radius_opt/spacing)
+    real_radius = spacing*N_at/math.pi
+    R = radius_opt
+    for i in range(N_at):
+        theta = 2*math.pi/N_at*i
+        xyz.append([real_radius*math.cos(theta), real_radius*math.sin(theta),0])
+
+    N_height = round(math.pi*real_radius/(4*spacing))
+    for i in range(N_height):
+        phi = i*2*spacing/real_radius
+        r_layer = real_radius*math.cos(phi)
+        N_at_layer = round(math.pi*r_layer/spacing)
+        for j in range(N_at_layer):
+            theta = 2*math.pi/N_at_layer*j
+            xyz.append([r_layer*math.cos(theta), r_layer*math.sin(theta), real_radius*math.sin(phi)])
+            xyz.append([r_layer*math.cos(theta), r_layer*math.sin(theta), -1*real_radius*math.sin(phi)])
+
+    xyz = np.array(xyz)
+    NP = np.vstack((xyz, put_staples(xyz, real_radius)))
+    density = 4 / (lattice_constants[metal_opt]**3)
+    volume = 4 * math.pi *real_radius**3/3
+    N_total = density*volume
+
+    print("The real radius of the NP is {:.3f} nm".format(real_radius))
+    print("There should be {:d} metal atoms".format(int(N_total)))
+    print("There are {:d} metal atoms".format(len(xyz)))
+    print("The mass of the metal should be multiplied by {:.4f}".format(N_total/len(xyz)))
+
+    return NP
+
 def put_staples(shell, radius):
     if lignum_opt > 12:
         S_atoms = hollow_sphere(radius, lignum_opt)
@@ -184,7 +218,7 @@ def put_staples(shell, radius):
 
 def print_xyz(coords):
     coords = coords * 10
-    output = open(outname_opt, "a")
+    output = open(outname_opt, "w")
     output.write(str(len(coords)) + "\n\n")
     N_metal = len(coords)-lignum_opt
     for i in range(N_metal):
@@ -203,3 +237,5 @@ elif sphere_opt == "solid":
     print_xyz(solid_sphere())
 elif sphere_opt == "semisolid":
     print_xyz(semi_solid_sphere(thickness_opt))
+elif sphere_opt == "gkeka":
+    print_xyz(gkeka_sphere())
