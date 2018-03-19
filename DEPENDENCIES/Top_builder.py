@@ -20,7 +20,7 @@ Top_opt = options.TopFile
 Ele_opt = options.Element
 anchor_opt = options.AnchorIndex-1
 out_opt = options.OutFile
-M_bead = "C1"
+M_bead = "C0"
 cons_type = "1" #as written by martinize
 bond_type = "1"
 EN_cons = 32500
@@ -43,7 +43,7 @@ def init_topology(name_file):
 
 def write_headers():
     out.write("; Topology written by Top_builder.py \n \n")
-    out.write("#include \"inputs/martini_v2.2refP.itp\" \n \n")
+    out.write("#include \"inputs/martini_v2.2refP_SFU.itp\" \n \n")
     out.write("#define RUBBER_BANDS \n \n")
 
 def write_moltype():
@@ -65,7 +65,7 @@ def write_atoms():
         line = str(itp[i])
         if "[ atoms ]" in itp[i]:
             found_pattern = True
-        elif "[ bonds ]" in itp[i]:
+        elif "[ virtual_sites2 ]" in itp[i]:
             break
         elif found_pattern and line[0] != ";":
             section.append(line.split())
@@ -73,15 +73,40 @@ def write_atoms():
     for i in range(NM):
         out.write("{:5d}{:>6}{:6d}{:>6}{:>6}{:6d}{:8.4f} ; None \n".format(i+1, M_bead, i+1, Ele_opt, Ele_opt, i+1, 0.0))
 
-    section = np.array(section)
+    #section = np.array(section)
     res = NM
     resid = Ele_opt
     for i in range(NL):
         for j in range(len(section)):
-            if resid != section[j,3]:
+            if resid != section[j][3]:
                 res += 1
-                resid = section[j,3]
-            out.write("{:5d}{:>6}{:6d}{:>6}{:>6}{:6d}{:8.4f} ; {} \n".format(NM+i*N_at_lig+j+1, section[j,1], res, resid, section[j,4], NM+i*N_at_lig+j+1, float(section[j,6]), section[j,8]))
+                resid = section[j][3]
+            if len(section[j])==9:
+                    out.write("{:5d}{:>6}{:6d}{:>6}{:>6}{:6d}{:8.4f} ; {} \n".format(NM+i*N_at_lig+j+1, section[j][1], res, resid, section[j][4], NM+i*N_at_lig+j+1, float(section[j][6]), section[j][8]))
+            if len(section[j])==10:
+                    out.write("{:5d}{:>6}{:6d}{:>6}{:>6}{:6d}{:8.4f}{:8.4f} ; {} \n".format(NM+i*N_at_lig+j+1, section[j][1], res, resid, section[j][4], NM+i*N_at_lig+j+1, float(section[j][6]), float(section[j][7]), section[j][9]))
+    out.write("\n")
+
+def write_virtual_sites2():
+    found_pattern = False
+    section = []
+    for i in range(len(itp)):
+        line = str(itp[i])
+        if "[ virtual_sites2 ]" in itp[i]:
+            found_pattern = True
+        elif "[ bonds ]" in itp[i]:
+            break
+        elif found_pattern and line[0] != ";":
+            section.append(line.split())
+
+    section = np.array(section)
+    out.write("[ virtual_sites2 ] \n")
+    for i in range(NL):
+        for j in range(len(section)):
+            at1 = NM+i*N_at_lig+int(section[j,0])
+            at2 = NM+i*N_at_lig+int(section[j,1])
+            at3 = NM+i*N_at_lig+int(section[j,2])
+            out.write("{:5d}{:6d}{:6d}{:>7}{:10.5f} ; {} \n".format(at1, at2, at3, section[j,3], float(section[j,4]), section[j,6]))
     out.write("\n")
 
 def write_bonds():
@@ -108,7 +133,8 @@ def write_bonds():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), int(section[j,4]), section[j,6]))
 
-    write_M_bonds()
+    #write_M_bonds()
+    #write_S_bonds()
     out.write("#ifndef NO_RUBBER_BANDS \n#ifndef RUBBER_FC \n#define RUBBER_FC 500.000000 \n#endif \n")
     for i in range(NL):
         for j in range(len(section_rub)):
@@ -138,7 +164,7 @@ def write_constraints():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), section[j,5]))
 
-    #write_M_cons()
+    write_M_cons()
     write_S_cons()
     out.write("\n")
 
@@ -146,7 +172,8 @@ def write_M_bonds():
     D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
     bonds = []
     for i in range(NM):
-        near_M = np.argsort(D_M_M[i])[1:20]
+        near_M = np.append(np.argsort(D_M_M[i])[1:5], np.argsort(D_M_M[i])[-1])
+        #near_M = np.argsort(D_M_M[i])[1:5]
         for j in range(len(near_M)):
             at1 = i+1
             at2 = near_M[j]+1
@@ -155,7 +182,29 @@ def write_M_bonds():
                 a.reverse()
                 bonds.append(a)
                 out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(at1, at2, bond_type, D_M_M[at1-1, at2-1], EN_cons))
-                #out.write("{:5d}{:6d}{:>7}{:10.5f} ; M - M \n".format(at1, at2, cons_type, D_M_M[at1-1, at2-1]))
+
+def write_M_cons():
+    D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
+    bonds = []
+    for i in range(NM):
+        near_M = np.argsort(D_M_M[i])[1:5]
+        for j in range(len(near_M)):
+            at1 = i+1
+            at2 = near_M[j]+1
+            a = [at1, at2]
+            if a not in bonds :
+                a.reverse()
+                bonds.append(a)
+                out.write("{:5d}{:6d}{:>7}{:10.6f} ; M - M \n".format(at1, at2, cons_type, D_M_M[at1-1, at2-1]))
+
+def write_S_bonds():
+    #D_S_M = cdist(x_sys[n_sys==n_lig[anchor_opt]], x_sys[n_sys==Ele_opt])
+    for i in range(NL):
+        D_S_M = cdist([x_sys[NM+i*N_at_lig+anchor_opt]], x_sys[n_sys==Ele_opt])[0]
+        near_M = np.argsort(D_S_M)[0]
+        at1 = NM+i*N_at_lig+anchor_opt+1
+        at2 = near_M+1
+        out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(at1, at2, bond_type, 0.47, EN_cons))
 
 def write_S_cons():
     #D_S_M = cdist(x_sys[n_sys==n_lig[anchor_opt]], x_sys[n_sys==Ele_opt])
@@ -178,14 +227,14 @@ def write_angles():
         elif found_pattern and line[0] != ";":
             section.append(line.split())
 
-    section = np.array(section)
+    #section = np.array(section)
     out.write("[ angles ]\n;  ai    aj    ak funct           c0           c1\n")
     for i in range(NL):
         for j in range(len(section)):
-            at1 = NM+i*N_at_lig+int(section[j,0])
-            at2 = NM+i*N_at_lig+int(section[j,1])
-            at3 = NM+i*N_at_lig+int(section[j,2])
-            out.write("{:5d}{:6d}{:6d}{:>7}{:11.5f}{:6d} ; {} \n".format(at1, at2, at3, section[j,3], float(section[j,4]), int(section[j,5]), section[j,7]))
+            at1 = NM+i*N_at_lig+int(section[j][0])
+            at2 = NM+i*N_at_lig+int(section[j][1])
+            at3 = NM+i*N_at_lig+int(section[j][2])
+            out.write("{:5d}{:6d}{:6d}{:>7}{:11.5f}{:6d} ; {} \n".format(at1, at2, at3, section[j][3], float(section[j][4]), int(section[j][5]), section[j][7]))
     out.write("\n")
 
 def write_dihedrals():
@@ -202,11 +251,14 @@ def write_dihedrals():
     out.write("[ dihedrals ]\n ;  ai    aj    ak    al funct           c0           c1           c2 \n")
     for i in range(NL):
         for j in range(len(section)):
-            at1 = NM+i*N_at_lig+int(section[j,0])
-            at2 = NM+i*N_at_lig+int(section[j,1])
-            at3 = NM+i*N_at_lig+int(section[j,2])
-            at4 = NM+i*N_at_lig+int(section[j,3])
-            out.write("{:5d}{:6d}{:6d}{:6d}{:>7}{:7d}{:6d} ; {} \n".format(at1, at2, at3, at4, section[j,4], int(section[j,5]), int(section[j,6]), section[j,8]))
+            at1 = NM+i*N_at_lig+int(section[j][0])
+            at2 = NM+i*N_at_lig+int(section[j][1])
+            at3 = NM+i*N_at_lig+int(section[j][2])
+            at4 = NM+i*N_at_lig+int(section[j][3])
+            if len(section[j])==10:
+                out.write("{:5d}{:6d}{:6d}{:6d}{:>7}{:7d}{:6d}{:>7} ; {} \n".format(at1, at2, at3, at4, section[j][4], int(section[j][5]), int(section[j][6]), section[j][7], section[j][9]))
+            if len(section[j])==9:
+                out.write("{:5d}{:6d}{:6d}{:6d}{:>7}{:7d}{:6d} ; {} \n".format(at1, at2, at3, at4, section[j][4], int(section[j][5]), int(section[j][6]), section[j][8]))
     out.write("\n")
 
 def write_footers():
@@ -226,6 +278,7 @@ out = open(out_opt,'w')
 write_headers()
 write_moltype()
 write_atoms()
+write_virtual_sites2()
 write_bonds()
 write_constraints()
 write_angles()
@@ -233,3 +286,4 @@ write_dihedrals()
 write_footers()
 
 out.close()
+print("DONT FORGET TO CHANGE THE MASS OF C0 IN THE MARTINI_SFU ITP FILE!")
