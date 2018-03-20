@@ -73,7 +73,39 @@ def fcc_solid_sphere():
 
     return fcc_sphere
 
+def fcc_hollow_sphere():
+    const = lattice_constants[metal_opt]
+    cells_per_side = int((((2*radius_opt)//const)+1)//2*2+1)
+    N_unit_cells = cells_per_side**3
+    N_beads = N_unit_cells * 14
+    fcc_block = np.array([])
+
+    for i in range(cells_per_side):
+        for j in range(cells_per_side):
+            for k in range(cells_per_side):
+
+                fcc_block = np.append(fcc_block, [i,j,k,i+1,j,k,i,j+1,k,i,j,k+1,i+1,j+1,k,i+1,j,k+1,i,j+1,k+1,i+1,j+1,k+1])
+                fcc_block = np.append(fcc_block, [i,j+0.5,k+0.5,i+0.5,j,k+0.5,i+0.5,j+0.5,k,i+1,j+0.5,k+0.5,i+0.5,j+1,k+0.5,i+0.5,j+0.5,k+1])
+
+    fcc_block = fcc_block * const
+    fcc_block = fcc_block.reshape((N_beads,3))
+    fcc_block = np.unique(fcc_block, axis=0)
+    fcc_block = center(fcc_block)
+
+    print("Radius of the NP is {:.2f} nm".format(radius_opt))
+    fcc_sphere=fcc_block[np.linalg.norm(fcc_block, axis=1)<= (radius_opt-metal_radius[metal_opt])]
+    N_teo = len(fcc_sphere)
+    print("There should be {} atoms".format(N_teo))
+    fcc_sphere=fcc_sphere[np.linalg.norm(fcc_sphere, axis=1)>= (radius_opt-3*metal_radius[metal_opt])]
+    N_real = len(fcc_sphere)
+    print("There are {} atoms".format(N_real))
+    print("The metal's mass should be multiplied by {:.4f}".format(float(N_teo)/N_real))
+    fcc_sphere = np.vstack((fcc_sphere, put_staples(fcc_sphere, radius_opt)))
+
+    return fcc_sphere
+
 def hollow_sphere(radius, samples):
+    print("The radius of the NP is {} nm".format(radius_opt))
     return (radius-metal_radius[metal_opt])*fibonacci_sphere(samples)
 
 def get_N(radius):
@@ -169,7 +201,7 @@ def semi_solid_sphere(thick):
     return points
 
 def gkeka_sphere():
-    spacing = 0.11 #metal_radius[metal_opt]# 0.11 #Optimal for a closed sphere on the edges
+    spacing = metal_radius[metal_opt]# 0.125 #Optimal for a closed sphere on the edges
     xyz = []
     N_at = round(math.pi*radius_opt/spacing)
     real_radius = spacing*N_at/math.pi
@@ -178,9 +210,10 @@ def gkeka_sphere():
         theta = 2*math.pi/N_at*i
         xyz.append([real_radius*math.cos(theta), real_radius*math.sin(theta),0])
 
-    N_height = round(math.pi*real_radius/(4*spacing))
+    height = (math.pi*real_radius/(2*spacing)-1)/2
+    N_height = round(height)
     for i in range(N_height):
-        phi = i*2*spacing/real_radius
+        phi = (i+1)*2*spacing/real_radius
         r_layer = real_radius*math.cos(phi)
         N_at_layer = round(math.pi*r_layer/spacing)
         for j in range(N_at_layer):
@@ -188,6 +221,9 @@ def gkeka_sphere():
             xyz.append([r_layer*math.cos(theta), r_layer*math.sin(theta), real_radius*math.sin(phi)])
             xyz.append([r_layer*math.cos(theta), r_layer*math.sin(theta), -1*real_radius*math.sin(phi)])
 
+    if height-round(height) <=0.5 and height-round(height) >=0.25:
+        xyz.append([0.0, 0.0, real_radius])
+        xyz.append([0.0, 0.0, -real_radius])
     xyz = np.array(xyz)
     NP = np.vstack((xyz, put_staples(xyz, real_radius)))
     density = 4 / (lattice_constants[metal_opt]**3)
@@ -196,8 +232,8 @@ def gkeka_sphere():
 
     print("The real radius of the NP is {:.3f} nm".format(real_radius))
     print("There should be {:d} metal atoms".format(int(N_total)))
-    print("There are {:d} metal atoms".format(len(xyz)))
-    print("The mass of the metal should be multiplied by {:.4f}".format(N_total/len(xyz)))
+    print("There are {:d} metal atoms".format(len(xyz)-1))
+    print("The mass of the metal should be multiplied by {:.4f}".format(N_total/(len(xyz)-1)))
 
     return NP
 
@@ -206,7 +242,9 @@ def put_staples(shell, radius):
         S_atoms = hollow_sphere(radius, lignum_opt)
     elif lignum_opt == 6:
         r = radius
+        a = math.sqrt(2)/2
         S_atoms = np.array([[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]])
+        #S_atoms = np.array([[a*r,0,-a*r],[-a*r,0,a*r],[0,r,0],[0,-r,0],[a*r,0,a*r],[-a*r,0,-a*r]])
     distances = cdist(S_atoms, shell)
     mins = np.argmin(distances, axis=1)
     for i in range(len(S_atoms)):
@@ -229,6 +267,8 @@ def print_xyz(coords):
 
 if sphere_opt == "fcc":
     print_xyz(fcc_solid_sphere())
+elif sphere_opt == "fcc_hollow":
+    print_xyz(fcc_hollow_sphere())
 elif sphere_opt == "hollow":
     points = hollow_sphere(radius_opt, get_N(radius_opt))
     NP = np.vstack((points, put_staples(points, radius_opt-metal_radius[metal_opt])))

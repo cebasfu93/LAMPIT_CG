@@ -136,3 +136,4 @@ for i in range(N_S):
     r_coat = np.append(r_coat, r_lig)
 
 print_gro(x_coat, n_coat, r_coat)
+#print_gro(x_core, n_core, n_core)
