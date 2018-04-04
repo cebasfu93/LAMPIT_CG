@@ -137,7 +137,8 @@ def write_bonds():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), int(section[j,4]), section[j,6]))
 
-    write_M_bonds()
+    #write_M_bonds()
+    write_concentric_M_bonds()
     write_S_bonds()
     out.write("#ifndef NO_RUBBER_BANDS \n#ifndef RUBBER_FC \n#define RUBBER_FC 500.000000 \n#endif \n")
     for i in range(NL):
@@ -173,13 +174,13 @@ def write_constraints():
     #write_S_cons()
     out.write("\n")
 
-def write_concentric_M_cons():
+def write_concentric_M_bonds():
     x_M = x_sys[n_sys==Ele_opt]
-    D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
+    D_M_M = cdist(x_M, x_M)
     norm_M = np.linalg.norm(x_M, axis=0)
     N_M = len(x_M)
     for i in range(1, N_M):
-        out.write("{:5d}{:6d}{:>7}{:10.6f} ; COM - M \n".format(1, i+1, cons_type, D_M_M[0,i]))
+        out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(1, i+1, bond_type, D_M_M[0,i], EN_cons))
 
 def write_M_bonds():
     D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])

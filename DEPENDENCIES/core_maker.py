@@ -202,7 +202,7 @@ def semi_solid_sphere(thick):
 
 def gkeka_sphere():
     spacing = metal_radius[metal_opt]# 0.125 #Optimal for a closed sphere on the edges
-    xyz = []
+    xyz = [[0, 0, 0]]
     N_at = round(math.pi*radius_opt/spacing)
     real_radius = spacing*N_at/math.pi
     R = radius_opt
