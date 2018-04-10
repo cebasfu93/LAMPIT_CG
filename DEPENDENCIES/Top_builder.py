@@ -45,7 +45,7 @@ def init_topology(name_file):
 def write_headers():
     out.write("; Topology written by Top_builder.py \n \n")
     out.write("#include \"inputs/martini_v2.2refP_SFU.itp\" \n \n")
-    out.write("#define RUBBER_BANDS \n \n")
+    out.write("#define NO_RUBBER_BANDS \n \n")
 
 def write_moltype():
     found_pattern = False
@@ -79,10 +79,11 @@ def write_atoms():
     section = np.array(section)
     res = NM
     resid = Ele_opt
-
+    name = Ele_opt
     for i in range(NL):
         for j in range(len(section)):
-            if resid != section[j][3]:
+            if resid != section[j][3] or name == section[j][4]:
+                name = section[j][4]
                 res += 1
                 resid = section[j][3]
             if len(section[j])==9:
@@ -137,8 +138,8 @@ def write_bonds():
             at2 = NM+i*N_at_lig+int(section[j,1])
             out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; {} \n".format(at1, at2, section[j,2], float(section[j,3]), int(section[j,4]), section[j,6]))
 
-    #write_M_bonds()
-    write_concentric_M_bonds()
+    write_M_bonds()
+    #write_concentric_M_bonds()
     write_S_bonds()
     out.write("#ifndef NO_RUBBER_BANDS \n#ifndef RUBBER_FC \n#define RUBBER_FC 500.000000 \n#endif \n")
     for i in range(NL):

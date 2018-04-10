@@ -112,7 +112,7 @@ def print_gro(xyz_coat, names_coat, resid_coat):
         rname = resid_coat[i]
         if rname == element_opt:
             res += 1
-        elif rname != resid_coat[i-1]:
+        elif rname != resid_coat[i-1] or names_coat[i] == names_coat[i-1]:
             res += 1
         write_gro_block(res ,resid_coat[i], names_coat[i], at, xyz_coat[i], output_opt)
     output=open(output_opt, "a")
