@@ -3,7 +3,7 @@ from optparse import OptionParser
 import math, random
 from  scipy.spatial.distance import cdist
 #from mpl_toolkits.mplot3d import Axes3D
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 lattice_constants = {'Pt' : 0.39242} #in nm
 lattice_constants['Au'] = 0.40782
@@ -238,7 +238,7 @@ def gkeka_sphere():
     return NP
 
 def extrapolate_N(radius):
-    X = np.array([0, 3.0, 6.0])
+    X = np.array([0, 3.0/2, 6.0/2])
     Y = np.array([0, 271, 1108])
     fit = np.poly1d(np.polyfit(X, Y, 2))
     return int(round(fit(radius)))
@@ -255,6 +255,17 @@ def sunflower_pts(num_pts, rad):
 
 def sunflower_sphere():
     xyz = sunflower_pts(extrapolate_N(radius_opt), radius_opt)
+    #dist = cdist(xyz, xyz)
+    #mins = np.sort(dist, axis=0)[-6:-2,:]
+    #print(mins.ravel())
+    #plt.hist(mins.ravel())
+    #plt.show()
+    density = 4 / (lattice_constants[metal_opt]**3)
+    N_teo = density * 4 * math.pi * radius_opt**3/3
+    print("There should be {:d} metal atoms".format(int(N_teo)))
+    print("There are {:d} metal atoms".format(len(xyz)))
+    print("The mass of the metal should be multiplied by {:.4f}".format(N_teo/len(xyz)))
+
     NP = np.vstack((xyz, put_staples(xyz, radius_opt)))
     return NP
 
