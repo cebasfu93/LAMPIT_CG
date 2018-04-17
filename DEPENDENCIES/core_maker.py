@@ -202,7 +202,7 @@ def semi_solid_sphere(thick):
 
 def gkeka_sphere():
     spacing = metal_radius[metal_opt]# 0.125 #Optimal for a closed sphere on the edges
-    xyz = [[0, 0, 0]]
+    xyz = []
     N_at = round(math.pi*radius_opt/spacing)
     real_radius = spacing*N_at/math.pi
     R = radius_opt
@@ -232,19 +232,41 @@ def gkeka_sphere():
 
     print("The real radius of the NP is {:.3f} nm".format(real_radius))
     print("There should be {:d} metal atoms".format(int(N_total)))
-    print("There are {:d} metal atoms".format(len(xyz)-1))
-    print("The mass of the metal should be multiplied by {:.4f}".format(N_total/(len(xyz)-1)))
+    print("There are {:d} metal atoms".format(len(xyz)-lignum_opt))
+    print("The mass of the metal should be multiplied by {:.4f}".format(N_total/(len(xyz)-lignum_opt)))
 
     return NP
 
+def extrapolate_N(radius):
+    X = np.array([0, 3.0, 6.0])
+    Y = np.array([0, 271, 1108])
+    fit = np.poly1d(np.polyfit(X, Y, 2))
+    return int(round(fit(radius)))
+
+def sunflower_pts(num_pts, rad):
+    indices = np.arange(0, num_pts, dtype=float) + 0.5
+
+    phi = np.arccos(1 - 2*indices/num_pts)
+    theta = math.pi * (1 + 5**0.5) * indices
+
+    x, y, z = np.cos(theta) * np.sin(phi), np.sin(theta) * np.sin(phi), np.cos(phi)
+    xyz = rad*np.array([x,y,z]).T
+    return xyz
+
+def sunflower_sphere():
+    xyz = sunflower_pts(extrapolate_N(radius_opt), radius_opt)
+    NP = np.vstack((xyz, put_staples(xyz, radius_opt)))
+    return NP
+
 def put_staples(shell, radius):
-    if lignum_opt > 12:
+    """if lignum_opt > 12:
         S_atoms = hollow_sphere(radius, lignum_opt)
     elif lignum_opt == 6:
         r = radius
         a = math.sqrt(2)/2
         S_atoms = np.array([[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]])
-        #S_atoms = np.array([[a*r,0,-a*r],[-a*r,0,a*r],[0,r,0],[0,-r,0],[a*r,0,a*r],[-a*r,0,-a*r]])
+        #S_atoms = np.array([[a*r,0,-a*r],[-a*r,0,a*r],[0,r,0],[0,-r,0],[a*r,0,a*r],[-a*r,0,-a*r]])"""
+    S_atoms = sunflower_pts(lignum_opt, radius)
     distances = cdist(S_atoms, shell)
     mins = np.argmin(distances, axis=1)
     for i in range(len(S_atoms)):
@@ -279,3 +301,5 @@ elif sphere_opt == "semisolid":
     print_xyz(semi_solid_sphere(thickness_opt))
 elif sphere_opt == "gkeka":
     print_xyz(gkeka_sphere())
+elif sphere_opt == "sunflower":
+    print_xyz(sunflower_sphere())
