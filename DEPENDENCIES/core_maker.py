@@ -269,14 +269,16 @@ def sunflower_sphere():
     return NP
 
 def put_staples(shell, radius):
-    """if lignum_opt > 12:
-        S_atoms = hollow_sphere(radius, lignum_opt)
+    if lignum_opt > 12:
+        S_atoms = sunflower_pts(lignum_opt, radius)
+        #S_atoms = hollow_sphere(radius, lignum_opt)
     elif lignum_opt == 6:
         r = radius
         a = math.sqrt(2)/2
         S_atoms = np.array([[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]])
-        #S_atoms = np.array([[a*r,0,-a*r],[-a*r,0,a*r],[0,r,0],[0,-r,0],[a*r,0,a*r],[-a*r,0,-a*r]])"""
-    S_atoms = sunflower_pts(lignum_opt, radius)
+        #S_atoms = np.array([[a*r,0,-a*r],[-a*r,0,a*r],[0,r,0],[0,-r,0],[a*r,0,a*r],[-a*r,0,-a*r]])
+    else:
+        print("There are not enough ligands to be considered a homogeneous distribution")
     distances = cdist(S_atoms, shell)
     mins = np.argmin(distances, axis=1)
     for i in range(len(S_atoms)):
