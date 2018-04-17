@@ -257,7 +257,6 @@ def sunflower_sphere():
     xyz = sunflower_pts(extrapolate_N(radius_opt), radius_opt)
     #dist = cdist(xyz, xyz)
     #mins = np.sort(dist, axis=0)[-6:-2,:]
-    #print(mins.ravel())
     #plt.hist(mins.ravel())
     #plt.show()
     density = 4 / (lattice_constants[metal_opt]**3)

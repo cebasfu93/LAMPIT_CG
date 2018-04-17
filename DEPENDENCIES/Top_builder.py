@@ -24,7 +24,8 @@ out_opt = options.OutFile
 M_bead = "C0"
 cons_type = "1" #as written by martinize
 bond_type = "1"
-EN_cons = 35000 #32500
+EN_cons_neigh = 1250 #310, 312, 305, 355. Gkeka e Rossi
+EN_cons_far = 2250
 
 def init_gro(name_file):
     gro_file = np.genfromtxt(name_file, dtype='str', delimiter="\n", skip_header=2, skip_footer=1)
@@ -181,14 +182,15 @@ def write_concentric_M_bonds():
     norm_M = np.linalg.norm(x_M, axis=0)
     N_M = len(x_M)
     for i in range(1, N_M):
-        out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(1, i+1, bond_type, D_M_M[0,i], EN_cons))
+        out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(1, i+1, bond_type, D_M_M[0,i], EN_cons_far))
 
 def write_M_bonds():
     D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
     bonds = []
     for i in range(NM):
-        near_M = np.append(np.argsort(D_M_M[i])[1:5], np.argsort(D_M_M[i])[-1])
-        #near_M = np.argsort(D_M_M[i])[1:5]
+        #near_M = np.append(np.argsort(D_M_M[i])[1:5], np.argsort(D_M_M[i])[-1])
+        near_M = np.argsort(D_M_M[i])[1:7]
+        far_M = np.argsort(D_M_M[i])[-1]
         for j in range(len(near_M)):
             at1 = i+1
             at2 = near_M[j]+1
@@ -196,7 +198,13 @@ def write_M_bonds():
             if a not in bonds :
                 a.reverse()
                 bonds.append(a)
-                out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(at1, at2, bond_type, D_M_M[at1-1, at2-1], EN_cons))
+                out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(at1, at2, bond_type, D_M_M[at1-1, at2-1], EN_cons_neigh))
+        at2 = far_M+1
+        a = [at1, at2]
+        if a not in bonds:
+            a.reverse()
+            bonds.append(a)
+            out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - M \n".format(at1, at2, bond_type, D_M_M[at1-1, at2-1], EN_cons_far))
 
 def write_M_cons():
     D_M_M = cdist(x_sys[n_sys==Ele_opt], x_sys[n_sys==Ele_opt])
@@ -219,7 +227,7 @@ def write_S_bonds():
         near_M = np.argsort(D_S_M)[0]
         at1 = NM+i*N_at_lig+anchor_opt+1
         at2 = near_M+1
-        out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - S \n".format(at1, at2, bond_type, 0.47, EN_cons))
+        out.write("{:5d}{:6d}{:>7}{:10.5f}{:7d} ; M - S \n".format(at1, at2, bond_type, 0.47, EN_cons_neigh))
 
 def write_S_cons():
     #D_S_M = cdist(x_sys[n_sys==n_lig[anchor_opt]], x_sys[n_sys==Ele_opt])
