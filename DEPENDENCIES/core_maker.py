@@ -265,22 +265,29 @@ def sunflower_sphere():
     print("There are {:d} metal atoms".format(len(xyz)))
     print("The mass of the metal should be multiplied by {:.4f}".format(N_teo/len(xyz)))
 
-    NP = np.vstack((xyz, put_staples(xyz, radius_opt)))
+    S_atoms = put_staples(xyz, radius_opt)
+    if not S_atoms:
+        NP = xyz
+    else:
+        NP = np.vstack((xyz, put_staples(xyz, radius_opt)))
     return NP
 
 def put_staples(shell, radius):
+    S_atoms = []
     if lignum_opt > 12:
         S_atoms = sunflower_pts(lignum_opt, radius)
         #S_atoms = hollow_sphere(radius, lignum_opt)
+        distances = cdist(S_atoms, shell)
+        mins = np.argmin(distances, axis=1)
     elif lignum_opt == 6:
         r = radius
         a = math.sqrt(2)/2
         S_atoms = np.array([[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]])
         #S_atoms = np.array([[a*r,0,-a*r],[-a*r,0,a*r],[0,r,0],[0,-r,0],[a*r,0,a*r],[-a*r,0,-a*r]])
+        distances = cdist(S_atoms, shell)
+        mins = np.argmin(distances, axis=1)
     else:
         print("There are not enough ligands to be considered a homogeneous distribution")
-    distances = cdist(S_atoms, shell)
-    mins = np.argmin(distances, axis=1)
     for i in range(len(S_atoms)):
         norma=np.linalg.norm(shell[mins[i]])
         scaling = (norma + 0.47)/norma #0.47 is the standard bead-bead distance in Martini
