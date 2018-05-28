@@ -32,7 +32,7 @@ parser.add_option("-o", "--output", action="store", type='string', dest="OutputF
 parser.add_option("-m", "--metal", action="store", type='string', dest="Metal", default='Au', help="Chemical symbol of the core")
 parser.add_option("-n", "--ligands", action="store", type='int', dest="NumberLigands", default='60', help="Number of ligands to place around the sphere")
 parser.add_option("-r", "--radius", action="store", type='float', dest="Radius", default='3.0', help="Radius of the spherical core (nm)")
-parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='gkeka', help="Methods used to build the sphere. Valid options: fcc, hollow, solid, semisolid. When solid is selected, the output radius is not the same as the requested")
+parser.add_option("-t", "--type", action="store", type='string', dest="SphereType", default='sunflower', help="Methods used to build the sphere. Valid options: fcc, hollow, solid, semisolid, gkeka, sunflower. When solid is selected, the output radius is not the same as the requested")
 parser.add_option("-d", "--thickness", action="store", type='float', dest="Thickness", default='1.2', help="Thickness of the shell (nm) when using option semisolid")
 (options, args) = parser.parse_args()
 outname_opt = options.OutputFile
@@ -238,10 +238,13 @@ def gkeka_sphere():
     return NP
 
 def extrapolate_N(radius):
+    #Regression with thata from Gkeka e.g. paper 310
     X = np.array([0, 3.0/2, 6.0/2])
     Y = np.array([0, 271, 1108])
+    print(np.polyfit(X, Y, 2))
     fit = np.poly1d(np.polyfit(X, Y, 2))
     return int(round(fit(radius)))
+    #return int(round(fit(radius)))
 
 def sunflower_pts(num_pts, rad):
     indices = np.arange(0, num_pts, dtype=float) + 0.5
@@ -266,7 +269,7 @@ def sunflower_sphere():
     print("The mass of the metal should be multiplied by {:.4f}".format(N_teo/len(xyz)))
 
     S_atoms = put_staples(xyz, radius_opt)
-    if not S_atoms:
+    if len(S_atoms)==0:
         NP = xyz
     else:
         NP = np.vstack((xyz, put_staples(xyz, radius_opt)))

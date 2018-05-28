@@ -45,7 +45,7 @@ def init_topology(name_file):
 
 def write_headers():
     out.write("; Topology written by Top_builder.py \n \n")
-    out.write("#include \"inputs/martini_v2.2refP_SFU.itp\" \n \n")
+    out.write("#include \"inputs/martini_v2.2refP_C0.itp\" \n \n")
     out.write("#define NO_RUBBER_BANDS \n \n")
 
 def write_moltype():
